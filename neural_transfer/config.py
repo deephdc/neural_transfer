@@ -25,7 +25,14 @@ if 'APP_INPUT_OUTPUT_BASE_DIR' in os.environ:
 
 DATA_DIR = os.path.join(IN_OUT_BASE_DIR, 'data')
 IMG_STYLE_DIR = os.path.join(IN_OUT_BASE_DIR, 'neural_transfer/dataset/style_images')
-MODELS_DIR = os.path.join(IN_OUT_BASE_DIR, 'models')
+MODEL_DIR = os.path.join(IN_OUT_BASE_DIR, 'models')
+
+Obj_det_RemoteSpace = 'rshare:/neural_transfer/'
+obj_det_ImageDataDir = 'data/Images/'
+
+REMOTE_IMG_DATA_DIR = os.path.join(Obj_det_RemoteSpace, obj_det_ImageDataDir)
+
+REMOTE_MODELS_DIR = os.path.join(Obj_det_RemoteSpace, 'models/')
 
 # Input parameters for predict() (deepaas>=1.0.0)
 class PredictArgsSchema(Schema):
@@ -43,6 +50,71 @@ class PredictArgsSchema(Schema):
         location="form",
         description="Image to be styled."
     )
+            
+    accept = fields.Str(
+            require=False,
+            description="Returns the image with the new style or a pdf containing the 3 images.",
+            missing='image/png',
+            validate=validate.OneOf(['image/png', 'application/pdf']))
+    
+    model_name = fields.Str(
+        required=False,
+        missing = "mosaic",
+        description="Name of the saved model. This module already comes with some styles, just write the name: mosaic, candy, rain princess or udnie. You can see the styles in the dataset/style_images folder."
+    )
+    
+# Input parameters for train() (deepaas>=1.0.0)
+class TrainArgsSchema(Schema):
+    class Meta:
+        unknown = INCLUDE  # support 'full_paths' parameter
+        
+    epochs = fields.Int(
+        required=False,
+        missing = 2,
+        description="Number of training epochs."
+    )
+    
+    learning_rate = fields.Float(
+        required=False,
+        missing = 0.003,
+        description="Learning rate."
+    )
+    
+    batch_size = fields.Int(
+        required=False,
+        missing = 4,
+        description="Batch size for training."
+    )
+    
+    content_weight = fields.Float(
+        required=False,
+        missing = 0.00005,
+        description="Weight for content-loss."
+    )
+    
+    style_weight = fields.Float(
+        required=False,
+        missing = 1000000,
+        description="Number of iterations on the network to compute the gradients."
+    )
+    
+    size_train_img = fields.Float(
+        required=False,
+        missing = 256,
+        description="Size of training images, default is 256 X 256"
+    )
+    
+    log_interval = fields.Float(
+        required=False,
+        missing = 500,
+        description="Number of images after which the training loss is logged."
+    )
+    
+    checkpoint_interval = fields.Float(
+        required=False,
+        missing = 2000,
+        description="Number of batches after which a checkpoint of the trained model will be created."
+    )
     
     img_style = fields.Field(
         required=False,
@@ -53,45 +125,6 @@ class PredictArgsSchema(Schema):
         description="Image with the style."
     )
     
-    style = fields.Str(
-            required=False,  # force the user to define the value
-            enum=["The Starry Night - Van Gogh" , "Mosaic Lady", "Seated Nude - Picasso", "The Great Wave off Kanagawa - Hokusai"],  # list of choices
-            description="Selection of the image which style we want to transfer. Select one if you don't have any."  # help string
-        )
-    
-    num_steps = fields.Int(
-        required=False,
-        missing = 300,
-        description="Number of iterations on the network to compute the gradients."
-    )
-      
-    style_weight =  fields.Int(
-        required=False,
-        missing = 1000000,
-        description="Weigth of the image of the style. It represents the emphasis on style in the image. There is a tradeoff between style weight and content weight."
-    )
-     
-    content_weight =  fields.Float(
-        required=False,
-        missing = 1,
-        description="Weigth of the image of the content. It represents the emphasis on content in the image. There is a tradeoff between style weight and content weight"
-    )
-        
-    accept = fields.Str(
-            require=False,
-            description="Returns the image with the new style or a pdf containing the 3 images.",
-            missing='image/png',
-            validate=validate.OneOf(['image/png', 'application/pdf']))
-    
-# Input parameters for train() (deepaas>=1.0.0)
-class TrainArgsSchema(Schema):
-    class Meta:
-        unknown = INCLUDE  # support 'full_paths' parameter
 
-    # available fields are e.g. fields.Integer(), fields.Str(), fields.Boolean()
-    # full list of fields: https://marshmallow.readthedocs.io/en/stable/api_reference.html
-    #name = fields.Str(
-    #    required=True,
-    #    location="form",
-    #    description="Description"
-    #)
+
+
