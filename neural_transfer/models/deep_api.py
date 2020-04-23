@@ -101,8 +101,10 @@ def get_metadata():
     for key, val in predict_args.items():
         predict_args[key]['type'] = str(val['type'])
 
+    models_names = iutils.get_models()
     meta = {
         'name': None,
+        'models': str(models_names),
         'version': None,
         'summary': None,
         'home-page': None,
@@ -162,7 +164,7 @@ def _predict_data(args):
     
     # select wether cpu or gpu.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("[INFO]: Running in device: {}".format(device))
+    print("[INFO] Running in device: {}".format(device))
     
     #Download weight files and model from nextcloud if necessary.
     iutils.download_model(args['model_name'])
@@ -205,10 +207,10 @@ def _predict_data(args):
         futils.merge_images()
 
         #Create the PDF file.
-        result_pdf = futils.create_pdf(style_score.item(), content_score.item() )
+        result_pdf = futils.create_pdf()
         message = open(result_pdf, 'rb')
         
-    print("[INFO]: Transferring finished.")
+    print("[INFO] Transferring finished.")
      
     return message
 
@@ -248,15 +250,10 @@ def train(**kwargs):
     message = { "status": "ok",
                 "training": [],
               }
-
-    # use the schema.
-    #schema = cfg.TrainArgsSchema()
-    # deserialize key-word arguments.
-    #train_args = schema.load(kwargs)
     
     # 1. implement your training here. 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("[INFO]: Running in device: {}".format(device))
+    print("[INFO] Running in device: {}".format(device))
 
     np.random.seed(1234)
     torch.manual_seed(4321)
@@ -267,15 +264,14 @@ def train(**kwargs):
         transforms.ToTensor(),
         transforms.Lambda(lambda x: x.mul(255))
     ])
-    
-    print("[INFO] Downloading style image...")
-    #Download style image:
-    iutils.download_style_image()
-    
-    print("[INFO] Downloading training set...")
-    #Download training dataset:
+
+    # download style image.
+    iutils.download_style_image(kwargs["model_name"])
+
+    # download training dataset.
     iutils.download_dataset()
     
+    # loading dataset into Dataloader
     train_dataset = datasets.ImageFolder(cfg.DATA_DIR, transform)  #folder
     train_loader = DataLoader(train_dataset, batch_size=kwargs["batch_size"])
 
@@ -289,7 +285,7 @@ def train(**kwargs):
         transforms.Lambda(lambda x: x.mul(255))
     ])
     
-    img_style = os.path.join(cfg.DATA_DIR, 'style.jpg')
+    img_style = os.path.join(cfg.DATA_DIR, kwargs["model_name"])
 
     style = iutils.load_image(img_style, size=kwargs["size_train_img"])
     style = style_transform(style)
@@ -298,6 +294,9 @@ def train(**kwargs):
     features_style = vgg(iutils.normalize_batch(style))
     gram_style = [iutils.gram_matrix(y) for y in features_style]
     
+    print("[INFO] Starting training...")
+
+
     for e in range(kwargs["epochs"]):
         transformer.train()
         agg_content_loss = 0.
@@ -340,34 +339,34 @@ def train(**kwargs):
                                   (agg_content_loss + agg_style_loss) / (batch_id + 1)
                 )
                 print(mesg)
+                
+    
+    print("[INFO] Transferring finished.")
 
-            if cfg.DATA_DIR is not None and (batch_id + 1) % kwargs["checkpoint_interval"] == 0:
-                transformer.eval().cpu()
-                ckpt_model_filename = "ckpt_epoch_" + str(e) + "_batch_id_" + str(batch_id + 1) + ".pth"
-                ckpt_model_path = os.path.join(cfg.DATA_DIR, ckpt_model_filename)
-                torch.save(transformer.state_dict(), ckpt_model_path)
-                transformer.to(device).train()
-    print("[INFO]: Transferring finished.")
-
-    # save model
+    # save model.
     transformer.eval().cpu()
-    nums = [cfg.MODEL_DIR, kwargs["model_name"]]
+    head, sep, tail = kwargs["model_name"].partition('.')
+    nums = [cfg.MODEL_DIR, head]
     save_model_path = '{0}/{1}.pth'.format(*nums)
     torch.save(transformer.state_dict(), save_model_path)
     
-    if (kwargs['upload_model'] == "true"):
+    # upload to nextcloud.
+    if (kwargs['upload_model'] == True):
         #copy model weigths, classes to nextcloud.
         dest_dir = cfg.REMOTE_MODELS_DIR
-        print("[INFO] Upload %s to %s" % (model_path, dest_dir))
+        print("[INFO] Upload %s to %s" % (save_model_path, dest_dir))
         
         #uploading weights to nextcloud.
-        mutils.upload_model(model_path)
+        iutils.upload_model(save_model_path)
         print("[INFO] Model uploaded.")
 
-    print("\nDone, trained model saved at", save_model_path)
+    print("[INFO] Trained model saved at", save_model_path)
 
     # 2. update "message"
-    train_results = { "DONE": "Training is not implemented. Everything is done in 'Prediction'" }
+    train_results = {"Total loss" : (agg_content_loss + agg_style_loss) / (batch_id + 1),
+                     "Content loss": agg_content_loss / (batch_id + 1),
+                     "Style loss":agg_style_loss / (batch_id + 1) } 
+    
     message["training"].append(train_results)
 
     return message

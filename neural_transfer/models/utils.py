@@ -3,6 +3,7 @@
 import torch
 import subprocess
 from os import path
+from os import listdir
 import os
 from PIL import Image
 import torchvision.transforms as transforms
@@ -64,23 +65,27 @@ def download_dataset():
         images_path = os.path.join(cfg.DATA_DIR, "raw/training_dataset") 
         
         if not path.exists(images_path):
-            print('[INFO] No data found, downloading data...')
+            print('[INFO] No data found, downloading training dataset...')
             # from "rshare" remote storage into the container
             command = (['rclone', 'copy', '--progress', cfg.REMOTE_IMG_DATA_DIR, images_path])
             result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output, error = result.communicate()
             print('[INFO] Finished.')
         else:
-            print("[INFO] Images folder already exist.")
+            print("[INFO] Training dataset folder already exist.")
             
     except OSError as e:
         output, error = None, e
         
 
-def download_style_image():
+def download_style_image(name):
     try:
         images_path = cfg.DATA_DIR
-        print('[INFO]: Downloading image...')
+        
+        nums = [cfg.REMOTE_IMG_STYLE_DIR, name]
+        model_path = '{0}/{1}'.format(*nums)
+        
+        print('[INFO] Downloading image...')
         # from "rshare" remote storage into the container
         command = (['rclone', 'copy', '--progress', cfg.REMOTE_IMG_STYLE_DIR, images_path])
         result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -89,4 +94,20 @@ def download_style_image():
             
     except OSError as e:
         output, error = None, e
+        
+        
+def upload_model(model_path):
+    try:      
+        #from the container to "rshare" remote storage 
+        command = (['rclone', 'copy', '--progress', model_path, cfg.REMOTE_MODELS_DIR])
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = result.communicate()
+    except OSError as e:
+        output, error = None, e
 
+def get_models():
+    models = []
+    for f in listdir(cfg.MODEL_DIR): 
+        if f.endswith(".pth"):
+            models.append(f[:-4])
+    return models

@@ -30,7 +30,7 @@ MODEL_DIR = os.path.join(IN_OUT_BASE_DIR, 'models')
 neural_RemoteSpace = 'rshare:/neural_transfer/'
 
 REMOTE_IMG_DATA_DIR = os.path.join(neural_RemoteSpace, 'dataset/training_dataset/')
-REMOTE_IMG_STYLE_DIR = os.path.join(neural_RemoteSpace, 'style/')
+REMOTE_IMG_STYLE_DIR = os.path.join(neural_RemoteSpace, 'styles/')
 
 REMOTE_MODELS_DIR = os.path.join(neural_RemoteSpace, 'models/')
 
@@ -60,7 +60,7 @@ class PredictArgsSchema(Schema):
     model_name = fields.Str(
         required=False,
         missing = "mosaic",
-        description="Name of the saved model. This module already comes with some styles, just write the name: mosaic, candy, rain princess or udnie. You can see the styles in the dataset/style_images folder."
+        description="Name of the saved model. This module already comes with some styles, just write the name: 'mosaic', 'candy', 'rain_princess' or 'udnie'. You can see the styles in the dataset/style_images folder. Running 'get_metadata' return the list of models in the module."
     )
     
 # Input parameters for train() (deepaas>=1.0.0)
@@ -70,13 +70,13 @@ class TrainArgsSchema(Schema):
         
     model_name = fields.Str(
         required=True,
-        description="Name of the style model."
+        description="Name of the style image e.g. 'name.jpg' in nextcloud. This will also be the name of the model."
     )
     
     upload_model = fields.Boolean(
         required=False,
-        missing = 1,
-        description="Name of the style model."
+        missing = 2,
+        description="Upload model to nextcloud."
     )
     
     epochs = fields.Int(
@@ -115,19 +115,12 @@ class TrainArgsSchema(Schema):
         description="Size of training images, default is 256 X 256"
     )
     
-    log_interval = fields.Float(
+    log_interval = fields.Int(
         required=False,
-        missing = 500,
+        missing = 200,
         description="Number of images after which the training loss is logged."
     )
     
-    checkpoint_interval = fields.Float(
-        required=False,
-        missing = 2000,
-        description="Number of batches after which a checkpoint of the trained model will be created."
-    )
     
-
-
 
 
