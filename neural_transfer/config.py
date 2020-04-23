@@ -23,16 +23,16 @@ if 'APP_INPUT_OUTPUT_BASE_DIR' in os.environ:
         "Using \"BASE_DIR={}\" instead.".format(BASE_DIR)
         print(msg)
 
-DATA_DIR = os.path.join(IN_OUT_BASE_DIR, 'data')
+DATA_DIR = os.path.join(IN_OUT_BASE_DIR, 'data/')
 IMG_STYLE_DIR = os.path.join(IN_OUT_BASE_DIR, 'neural_transfer/dataset/style_images')
 MODEL_DIR = os.path.join(IN_OUT_BASE_DIR, 'models')
 
-Obj_det_RemoteSpace = 'rshare:/neural_transfer/'
-obj_det_ImageDataDir = 'data/Images/'
+neural_RemoteSpace = 'rshare:/neural_transfer/'
 
-REMOTE_IMG_DATA_DIR = os.path.join(Obj_det_RemoteSpace, obj_det_ImageDataDir)
+REMOTE_IMG_DATA_DIR = os.path.join(neural_RemoteSpace, 'dataset/training_dataset/')
+REMOTE_IMG_STYLE_DIR = os.path.join(neural_RemoteSpace, 'style/')
 
-REMOTE_MODELS_DIR = os.path.join(Obj_det_RemoteSpace, 'models/')
+REMOTE_MODELS_DIR = os.path.join(neural_RemoteSpace, 'models/')
 
 # Input parameters for predict() (deepaas>=1.0.0)
 class PredictArgsSchema(Schema):
@@ -68,6 +68,17 @@ class TrainArgsSchema(Schema):
     class Meta:
         unknown = INCLUDE  # support 'full_paths' parameter
         
+    model_name = fields.Str(
+        required=True,
+        description="Name of the style model."
+    )
+    
+    upload_model = fields.Boolean(
+        required=False,
+        missing = 1,
+        description="Name of the style model."
+    )
+    
     epochs = fields.Int(
         required=False,
         missing = 2,
@@ -88,17 +99,17 @@ class TrainArgsSchema(Schema):
     
     content_weight = fields.Float(
         required=False,
-        missing = 0.00005,
+        missing = 1e5,
         description="Weight for content-loss."
     )
     
     style_weight = fields.Float(
         required=False,
-        missing = 1000000,
+        missing = 1e10,
         description="Number of iterations on the network to compute the gradients."
     )
     
-    size_train_img = fields.Float(
+    size_train_img = fields.Int(
         required=False,
         missing = 256,
         description="Size of training images, default is 256 X 256"
@@ -116,15 +127,7 @@ class TrainArgsSchema(Schema):
         description="Number of batches after which a checkpoint of the trained model will be created."
     )
     
-    img_style = fields.Field(
-        required=False,
-        missing=None,
-        type="file",
-        data_key="image_style",
-        location="form",
-        description="Image with the style."
-    )
-    
+
 
 
 

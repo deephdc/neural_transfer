@@ -3,6 +3,7 @@
 import torch
 import subprocess
 from os import path
+import os
 from PIL import Image
 import torchvision.transforms as transforms
 import neural_transfer.config as cfg
@@ -45,19 +46,47 @@ def download_model(name):
         if not path.exists(model_path):
             remote_nums = [cfg.REMOTE_MODELS_DIR, name]
             remote_model_path = '{0}/{1}.pth'.format(*remote_nums)
-            print('[INFO]: Model not found, downloading model...')
+            print('[INFO] Model not found, downloading model...')
             # from "rshare" remote storage into the container
             command = (['rclone', 'copy', '--progress', remote_model_path, cfg.MODEL_DIR])
             result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output, error = result.communicate()
-            print('[INFO]: Finished.')
+            print('[INFO] Finished.')
         else:
-            print("[INFO]: Model found.")
+            print("[INFO] Model found.")
             
     except OSError as e:
         output, error = None, e
 
+#Loads Dataset from  Nextcloud.
+def download_dataset():
+    try:
+        images_path = os.path.join(cfg.DATA_DIR, "raw/training_dataset") 
+        
+        if not path.exists(images_path):
+            print('[INFO] No data found, downloading data...')
+            # from "rshare" remote storage into the container
+            command = (['rclone', 'copy', '--progress', cfg.REMOTE_IMG_DATA_DIR, images_path])
+            result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, error = result.communicate()
+            print('[INFO] Finished.')
+        else:
+            print("[INFO] Images folder already exist.")
+            
+    except OSError as e:
+        output, error = None, e
+        
 
-
-
+def download_style_image():
+    try:
+        images_path = cfg.DATA_DIR
+        print('[INFO]: Downloading image...')
+        # from "rshare" remote storage into the container
+        command = (['rclone', 'copy', '--progress', cfg.REMOTE_IMG_STYLE_DIR, images_path])
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = result.communicate()
+        print('[INFO] Finished.')
+            
+    except OSError as e:
+        output, error = None, e
 

@@ -9,15 +9,21 @@ import pkg_resources
 import os
 import re
 import pickle
+import time
 
 import neural_transfer.config as cfg
 import neural_transfer.models.utils as iutils
 import neural_transfer.models.file_utils as futils
 from neural_transfer.models.transformer_net import TransformerNet
+from neural_transfer.models.vgg import Vgg16 
 
 import torch
+import numpy as np
+from torch.optim import Adam
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision import transforms
 import torchvision.models as models
-import torchvision.transforms as transforms
 
 from PIL import Image
 from aiohttp.web import HTTPBadRequest
@@ -230,7 +236,7 @@ def get_train_args():
 # Comment this line, if you open training for everybody
 # More info: see https://github.com/indigo-dc/flaat
 ###
-@flaat.login_required() # Allows only authorized people to train
+#@flaat.login_required() # Allows only authorized people to train
 def train(**kwargs):
     """
     Train network
@@ -261,7 +267,16 @@ def train(**kwargs):
         transforms.ToTensor(),
         transforms.Lambda(lambda x: x.mul(255))
     ])
-    train_dataset = datasets.ImageFolder(args.dataset, transform)  #folder
+    
+    print("[INFO] Downloading style image...")
+    #Download style image:
+    iutils.download_style_image()
+    
+    print("[INFO] Downloading training set...")
+    #Download training dataset:
+    iutils.download_dataset()
+    
+    train_dataset = datasets.ImageFolder(cfg.DATA_DIR, transform)  #folder
     train_loader = DataLoader(train_dataset, batch_size=kwargs["batch_size"])
 
     transformer = TransformerNet().to(device)
@@ -273,14 +288,17 @@ def train(**kwargs):
         transforms.ToTensor(),
         transforms.Lambda(lambda x: x.mul(255))
     ])
-    style = iutils.load_image(kwargs["style_image"].filename, size=args.style_size)
+    
+    img_style = os.path.join(cfg.DATA_DIR, 'style.jpg')
+
+    style = iutils.load_image(img_style, size=kwargs["size_train_img"])
     style = style_transform(style)
-    style = style.repeat(args.batch_size, 1, 1, 1).to(device)
+    style = style.repeat(kwargs["batch_size"], 1, 1, 1).to(device)
 
-    features_style = vgg(utils.normalize_batch(style))
-    gram_style = [utils.gram_matrix(y) for y in features_style]
-
-    for e in range(args.epochs):
+    features_style = vgg(iutils.normalize_batch(style))
+    gram_style = [iutils.gram_matrix(y) for y in features_style]
+    
+    for e in range(kwargs["epochs"]):
         transformer.train()
         agg_content_loss = 0.
         agg_style_loss = 0.
@@ -293,8 +311,8 @@ def train(**kwargs):
             x = x.to(device)
             y = transformer(x)
 
-            y = utils.normalize_batch(y)
-            x = utils.normalize_batch(x)
+            y = iutils.normalize_batch(y)
+            x = iutils.normalize_batch(x)
 
             features_y = vgg(y)
             features_x = vgg(x)
@@ -303,7 +321,7 @@ def train(**kwargs):
 
             style_loss = 0.
             for ft_y, gm_s in zip(features_y, gram_style):
-                gm_y = utils.gram_matrix(ft_y)
+                gm_y = iutils.gram_matrix(ft_y)
                 style_loss += mse_loss(gm_y, gm_s[:n_batch, :, :])
             style_loss *= kwargs["style_weight"]
 
@@ -314,7 +332,7 @@ def train(**kwargs):
             agg_content_loss += content_loss.item()
             agg_style_loss += style_loss.item()
 
-            if (batch_id + 1) % args.log_interval == 500:
+            if (batch_id + 1) % kwargs["log_interval"] == 0:
                 mesg = "{}\tEpoch {}:\t[{}/{}]\tcontent: {:.6f}\tstyle: {:.6f}\ttotal: {:.6f}".format(
                     time.ctime(), e + 1, count, len(train_dataset),
                                   agg_content_loss / (batch_id + 1),
@@ -323,19 +341,28 @@ def train(**kwargs):
                 )
                 print(mesg)
 
-            if args.checkpoint_model_dir is not None and (batch_id + 1) % args.checkpoint_interval == 2000:
+            if cfg.DATA_DIR is not None and (batch_id + 1) % kwargs["checkpoint_interval"] == 0:
                 transformer.eval().cpu()
                 ckpt_model_filename = "ckpt_epoch_" + str(e) + "_batch_id_" + str(batch_id + 1) + ".pth"
-                ckpt_model_path = os.path.join(args.checkpoint_model_dir, ckpt_model_filename)
+                ckpt_model_path = os.path.join(cfg.DATA_DIR, ckpt_model_filename)
                 torch.save(transformer.state_dict(), ckpt_model_path)
                 transformer.to(device).train()
+    print("[INFO]: Transferring finished.")
 
     # save model
     transformer.eval().cpu()
-    save_model_filename = "epoch_" + str(args.epochs) + "_" + str(time.ctime()).replace(' ', '_') + "_" + str(
-        args.content_weight) + "_" + str(args.style_weight) + ".model"
-    save_model_path = os.path.join(args.save_model_dir, save_model_filename)
+    nums = [cfg.MODEL_DIR, kwargs["model_name"]]
+    save_model_path = '{0}/{1}.pth'.format(*nums)
     torch.save(transformer.state_dict(), save_model_path)
+    
+    if (kwargs['upload_model'] == "true"):
+        #copy model weigths, classes to nextcloud.
+        dest_dir = cfg.REMOTE_MODELS_DIR
+        print("[INFO] Upload %s to %s" % (model_path, dest_dir))
+        
+        #uploading weights to nextcloud.
+        mutils.upload_model(model_path)
+        print("[INFO] Model uploaded.")
 
     print("\nDone, trained model saved at", save_model_path)
 
