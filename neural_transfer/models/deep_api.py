@@ -68,7 +68,6 @@ def _fields_to_dict(fields_in):
         dict_out[key] = param
     return dict_out
 
-
 def get_metadata():
     """
     Function to read metadata
@@ -77,7 +76,7 @@ def get_metadata():
     """
 
     module = __name__.split('.', 1)
-    
+
     try:
         pkg = pkg_resources.get_distribution(module[0])
     except pkg_resources.RequirementParseError:
@@ -102,9 +101,11 @@ def get_metadata():
         predict_args[key]['type'] = str(val['type'])
 
     models_names = iutils.get_models()
+    models = ['mosaic', 'udnie', 'candy', 'rain_princess']
+    models = models + models_names
     meta = {
         'name': None,
-        'models': str(models_names),
+        'models': models,
         'version': None,
         'summary': None,
         'home-page': None,
@@ -152,7 +153,7 @@ def predict(**kwargs):
     if (kwargs['img_content'] is not None) and (kwargs['model_name'] is not None):
         return _predict_data(kwargs)
     else:
-        raise "ERROR : Please select a style and a content image."
+        raise "[ERROR] Please select a style and a content image."
     
 def _predict_data(args):
     """
@@ -167,9 +168,16 @@ def _predict_data(args):
     print("[INFO] Running in device: {}".format(device))
     
     #Download weight files and model from nextcloud if necessary.
-    iutils.download_model(args['model_name'])
+    if args['model_name'] in ['mosaic', 'udnie', 'candy', 'rain_princess']:
+        status_weights, _ = iutils.download_pred_model(args['model_name'])
+    else:
+        iutils.download_model(args['model_name'])
+    
     nums = [cfg.MODEL_DIR, args['model_name']]
     model_path = '{0}/{1}.pth'.format(*nums)
+    
+    if not(os.path.exists(model_path)):
+        raise "[ERROR] The name of the model does not exist. Please write an existing model name."
     
     # image content tmp path.
     img_content_tmp_path = args["img_content"].filename
