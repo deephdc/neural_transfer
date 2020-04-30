@@ -77,7 +77,7 @@ def get_metadata():
     """
 
     module = __name__.split('.', 1)
-
+    
     try:
         pkg = pkg_resources.get_distribution(module[0])
     except pkg_resources.RequirementParseError:
