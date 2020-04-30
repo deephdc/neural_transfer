@@ -7,8 +7,7 @@ DEEP Open Catalogue: Neural Transfer
 
 **Project:** This work is part of the [DEEP Hybrid-DataCloud](https://deep-hybrid-datacloud.eu/) project that has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 777435.
 
-This is an example of how to perform neural transfer. This module allows you to take the content of an image and reproduce it with a new artistic style using the style of a different image. The code is based on the [Neural transfer Pytorch example](https://pytorch.org/tutorials/advanced/neural_style_tutorial.html) that implements the [Neural-Style algorithm](https://arxiv.org/abs/1508.06576) developed by Leon A. Gatys, Alexander S. Ecker and Matthias Bethge. This module returns either the new styled image or a pdf containing the two input images and the result image.<br/><br/>
-
+This is an example of how to perform neural transfer. This module allows you to take the content of an image and reproduce it with a new artistic style using the style of a different image. The code is based on the [Faster Neural Style Pytorch example](https://github.com/pytorch/examples/tree/master/fast_neural_style) that implements the method described in [Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://arxiv.org/abs/1603.08155) developed by Justin Johnson, Alexandre Alahia and Li Fei-Fei. This module returns as a prediction either the new styled image or a pdf containing the input and the result image. You can also train a new network to have a add a new style.<br/><br/>
 
 <p align="center">
 <img src="./reports/figures/deep_examples.png" width="820">
@@ -19,7 +18,8 @@ This is an example of how to perform neural transfer. This module allows you to 
 1. [Installing this module](#installing-this-module)
     1. [Local installation](#local-installation)
     2. [Docker installation](#docker-installation)
-2. [Predict/Transfer](#predict)
+2. [Predict](#predict)
+2. [Train](#train)
 3. [Acknowledgements](#acknowledgments)
 
 ## Installing this module
@@ -30,7 +30,7 @@ This is an example of how to perform neural transfer. This module allows you to 
 >
 > This project has been tested in Ubuntu 18.04 with Python 3.7.4. Further package requirements are described in the
 > `requirements.txt` file.
-> - It is a requirement to have [torch>=1.4.0 and torchvision>=0.5.0 installed](https://pytorch.org/get-started/locally/). 
+> - It is a requirement to have [torch>=1.2.0 and torchvision>=0.5.0 installed](https://pytorch.org/get-started/locally/). 
 
 To start using this framework clone the repo:
 
@@ -60,15 +60,28 @@ Now open http://0.0.0.0:5000/ui and look for the methods belonging to the `neura
 
 You can find more information about it in the [DEEP Marketplace](https://marketplace.deep-hybrid-datacloud.eu/modules/deep-oc-neural_transfer.html).
 
-## Predict/Transfer
+## Predict
 
-Go to http://0.0.0.0:5000/ui and look for the `PREDICT` POST method. Click on 'Try it out', change whatever test args
-you want and click 'Execute'. There you must supply two different images, one containing the style and the other, the content. If you do not have any images where you can get the style, you can choose one in the `style` argument that we provide.
+Go to http://0.0.0.0:5000/ui and look for the `PREDICT` POST method. Click on 'Try it out', choose the image you want to stylize, write the name of the available style (we provide four styles: 'mosaic', 'udnie', 'rain_princess' and 'candy', you can also add more styles with the train function), choose the output type and click 'Execute'.
+
+## Train
+
+If you want to add a new style go to http://0.0.0.0:5000/ui and look for the `TRAIN` POST method. You will need a set of images that will be used to train the network and also the image with the new style. To do this, you need to create a new folder in Nextcloud called neural_transfer with the following architecture:
+
+```
+neural_transfer
+    ├── styles                 <- Folder containing the images with different styles to be transferred.
+    ├── models                 <- Folder containing the new trained models with the learned styles.
+    └── dataset                <- Folder containing the folder with the training images.
+        └── training_dataset        <- Folder containing the images used for training.
+```
+
+Once you have the style and the training images allocated click on 'Try it out', write the name of the image that contains the style and modify the parameters if necessary and click 'Execute'. Once the training is finished you can go to the Predict section, write the name of the model and stylize an image with your new style.
 
 
 ## Acknowledgements
 
-The original code, etc. were created by Pytorch and can be found [here](https://github.com/pytorch/tutorials/blob/master/advanced_source/neural_style_tutorial.py).
+The original code, etc. were created by Pytorch and can be found [here](https://github.com/pytorch/examples/tree/master/fast_neural_style).
 
 If you consider this project to be useful, please consider citing the DEEP Hybrid DataCloud project:
 
