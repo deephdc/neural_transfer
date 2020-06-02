@@ -27,10 +27,9 @@ This is an example of how to perform neural transfer. This module allows you to 
 ### Local installation
 
 > **Requirements**
->
-> This project has been tested in Ubuntu 18.04 with Python 3.7.4. Further package requirements are described in the
-> `requirements.txt` file.
-> - It is a requirement to have [torch>=1.2.0 and torchvision>=0.5.0 installed](https://pytorch.org/get-started/locally/). 
+
+- This project has been tested in Ubuntu 18.04 with Python 3.7.4. Further package requirements are described in the `requirements.txt` file.
+- It is a requirement to have [torch>=1.2.0 and torchvision>=0.5.0 installed](https://pytorch.org/get-started/locally/). 
 
 To start using this framework clone the repo:
 
@@ -66,7 +65,19 @@ Go to http://0.0.0.0:5000/ui and look for the `PREDICT` POST method. Click on 'T
 
 ## Train
 
-If you want to add a new style go to http://0.0.0.0:5000/ui and look for the `TRAIN` POST method. You will need a set of images that will be used to train the network and also the image with the new style. To do this, you need to create a new folder in Nextcloud called neural_transfer with the following architecture:
+If you want to add a new style go to http://0.0.0.0:5000/ui and look for the `TRAIN` POST method. You will need a set of images that will be used to train the network and also the image with the new style.
+
+There are two ways. The first one is by putting the images direct into the project folder. To do this, you need to place the following data in the following folders:
+
+```
+neural_transfer
+    └──  data                     <- Put your style image here.             
+         └── raw 
+             └── training_dataset <- Create the training_dataset folder and put the training images inside.
+         
+```
+
+The second way is to download the files that are stored remotely. To do this, you need to create a new folder in Nextcloud called neural_transfer with the following architecture:
 
 ```
 neural_transfer
@@ -76,7 +87,7 @@ neural_transfer
         └── training_dataset        <- Folder containing the images used for training.
 ```
 
-Once you have the style and the training images allocated click on 'Try it out', write the name of the image that contains the style and modify the parameters if necessary and click 'Execute'. Once the training is finished you can go to the Predict section, write the name of the model and stylize an image with your new style.
+Once you have the style and the training images allocated click on 'Try it out'. The name of the model must have the same name as the style image. For example, if your style image is named: "starry_night.jpg", the parameter `model_name` must be "starry_night.jpg" too. Then, modify the parameters if necessary and click 'Execute'. Once the training is finished you can go to the Predict section, write the name of the model without the type extension (e.g. .jpg) and stylize an image with your new style.
 
 
 ## Acknowledgements
